@@ -3,7 +3,7 @@
 
 	Generates Timepiece graphs based on foursquare checkins and shares it on facebook!.. just thought, I should try AngularJS :D!
 
-	![readme/readme.png](readme/readme.png)
+![readme/readme.png](readme/readme.png)
 
 ----
 #	Implementation:
@@ -17,6 +17,8 @@
 		+	menuCtrl
 		+	progressCtrl
 		+	canvasCtrl
+
+		
 ---
 +	AppEngine Servlet:
 	+ [facebook.java](): 	facebook graph API & OAuth 2.0 clients

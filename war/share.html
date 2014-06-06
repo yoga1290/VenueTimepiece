@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>posting</title>
+		<script src="https://code.jquery.com/jquery.js"></script>
+		
+		  <!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css"> 
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+
+	</head>
+	<body>
+        <div class="alert alert-info" id="info">
+            Loading...
+        <div>
+		<canvas id="canvas"></canvas>
+		<script>
+		var data=JSON.parse(sessionStorage.data);//{am,pm,maxCheckin,data.checkins}
+		var facebook_access_token='facebook_access_token_here';
+		var drawTimepiece=function(){
+                var i;
+                var canvas = document.getElementById("canvas");
+                var max=0;
+                for(i=0;i<12;i++)
+                    max=Math.max(max,Math.max(data.am[i],data.pm[i]));
+                
+                R=Math.min(canvas.width,canvas.height)/3; //diameter/2* (2/3)=diameter/3
+                
+                var context = canvas.getContext("2d");
+                var centerX = canvas.width / 2;
+                var centerY = canvas.height / 2;
+                var radius = Math.min(centerX,centerY);
+                var startingAngle,endingAngle=1.5*Math.PI;//as 12:00 starts at [0]//0;
+                var counterclockwise = false;
+                
+                context.setLineWidth=100;
+                context.strokeStyle="#0000FF";
+                
+                context.font="20px Arial";
+
+                var apm=0;
+                console.log("AM:");
+                console.log(data.am);
+                console.log("PM:");
+                console.log(data.pm);
+                for(i=0;i<12;i++)
+                {
+                    startingAngle=endingAngle;
+                    endingAngle=startingAngle+Math.PI*2/12;//12 hour graph
+                    //12 at [0] (as 12%12==0)
+                    //9AM at 0deg
+                    apm=0;
+                    if(data.am[i]<data.pm[i]) apm=1;//draw the bigger 1st
+
+                    radius=(apm==0 ? data.am[i]:data.pm[i])*R/max;
+                    context.fillStyle=(apm==0 ? "#00FF00":"#0000FF");
+                    context.strokeStyle="#C0C0C0";//(apm==0 ? "#0000FF":"#00FF00");
+                    //triangle
+                    context.beginPath(); // begin custom shape
+                    context.moveTo(centerX, centerY);
+                    context.lineTo(centerX+Math.cos(startingAngle)*radius ,centerY+Math.sin(startingAngle)*radius);
+                    context.lineTo(centerX+Math.cos(endingAngle)*radius ,centerY+Math.sin(endingAngle)*radius);
+                    context.lineTo(centerX,centerY);
+                    context.closePath();
+                    context.fill();
+                    context.stroke();
+                    //draw the one w smaller R:
+                    apm=1-apm;
+                    radius=(apm==0 ? data.am[i]:data.pm[i])*R/max;
+                    context.fillStyle=(apm==0 ? "#00FF00":"#0000FF");
+                    context.strokeStyle="#C0C0C0";//(apm==0 ? "#0000FF":"#00FF00");
+                    //triangle
+                    context.beginPath(); // begin custom shape
+                    context.moveTo(centerX, centerY);
+                    context.lineTo(centerX+Math.cos(startingAngle)*radius ,centerY+Math.sin(startingAngle)*radius);
+                    context.lineTo(centerX+Math.cos(endingAngle)*radius ,centerY+Math.sin(endingAngle)*radius);
+                    context.lineTo(centerX,centerY);
+                    context.closePath();
+                    context.fill();
+                    context.stroke();
+                }
+
+                endingAngle=1.5*Math.PI;
+                context.fillStyle="#C0C0C0";//="#FFFFFF";
+                context.strokeStyle="#C0C0C0";//="#0000FF";
+                for(i=0;i<12;i++)
+                {
+                    //12 at [0] (as 12%12==0)
+                    //9AM at 0deg
+                    apm=0;
+                    if(data.am[i]<data.pm[i]) apm=1;
+                    radius=(apm==0 ? data.am[i]:data.pm[i])*R/max;
+
+                    startingAngle=endingAngle;
+                    endingAngle=startingAngle+Math.PI*2/12;//12 hour graph
+                    //dot
+                    context.beginPath();
+                    context.arc(centerX+Math.cos(startingAngle)*radius ,centerY+Math.sin(startingAngle)*radius, 5, 0, Math.PI<<1, counterclockwise);
+                    context.closePath();
+                    context.fill();
+                     if((data.am[i]+data.pm[i])>0)
+                     {
+                        context.strokeText( (data.am[i]+data.pm[i]) ,centerX+Math.cos(startingAngle)*radius ,20+centerY+Math.sin(startingAngle)*radius );
+                        context.fillText( (data.am[i]+data.pm[i]) ,centerX+Math.cos(startingAngle)*radius ,20+centerY+Math.sin(startingAngle)*radius );
+                    
+                    context.stroke();
+                    }
+                }
+            };
+		var drawChart= function(){
+	        
+	            var i;
+	            var canvas = document.getElementById("canvas");	            
+
+	            canvas.height=canvas.width=1000;
+	            /*
+	              Math.max(
+	                $(window).width(),
+	                $(window).height()
+	              )-20;// this clears the canvas too!
+			//	*/
+	            
+	            var context = canvas.getContext("2d");
+	            var centerX = canvas.width / 2;
+	            var centerY = canvas.height / 2;
+	            var R = Math.min(centerX,centerY);
+	            var startingAngle,endingAngle= Math.PI*1.5;//starting angle
+	            var counterclockwise = false;
+
+	            
+	            
+	            // Draw the 1s with bigger area first
+	            var pie=[
+	                [Math.PI*2*(data.maxCheckin-data.checkins)/data.maxCheckin,
+	                  "#00FF00"],
+	                  [Math.PI*2*data.checkins/data.maxCheckin,
+	                  "#0000FF"]
+	                  ];
+	              pie.sort();
+	            for(i=pie.length-1;i>=0;i--)
+	            {   
+	                startingAngle=endingAngle;
+	                endingAngle=startingAngle+pie[i][0];
+	                context.strokeStyle=context.fillStyle=pie[i][1];
+	                context.beginPath();
+	                
+	                context.arc(centerX, centerY, R, startingAngle, endingAngle, counterclockwise);
+	                context.closePath();
+	                context.fill();
+	                context.stroke();
+	                //triangle
+	                //(centerX,centerY)
+	                //(centerX+Rcos(stAngle),centerY+Rsin(angle))
+	                //(centerX+Rcos(edAngle),centerY+Rsin(edAngle))
+	                context.strokeStyle=context.fillStyle=pie[i][1];
+
+	                context.beginPath(); // begin custom shape
+	                context.moveTo(centerX, centerY);
+	                context.lineTo(centerX+Math.cos(startingAngle)*R ,centerY+Math.sin(startingAngle)*R);
+	                context.lineTo(centerX+Math.cos(endingAngle)*R ,centerY+Math.sin(endingAngle)*R);
+	                context.lineTo(centerX,centerY);
+	                context.closePath();
+	                
+	                context.fill();
+	                context.stroke();
+	            }
+	             context.strokeStyle=context.fillStyle="#FFFFFF";
+	             context.beginPath();    
+	             context.arc(centerX, centerY, R*2/3, 0, Math.PI*2, counterclockwise);
+	             context.closePath();
+	             context.fill();
+
+        };
+        var dataURItoBlob=function (dataURI,mime) {
+            // convert base64 to raw binary data held in a string
+            // doesn't handle URLEncoded DataURIs
+            var byteString = window.atob(dataURI);
+            // separate out the mime component
+
+            // write the bytes of the string to an ArrayBuffer
+            //var ab = new ArrayBuffer(byteString.length);
+            var ia = new Uint8Array(byteString.length);
+            for (var i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+
+            // write the ArrayBuffer to a blob, and you're done
+            var blob = new Blob([ia], { type: mime });
+
+            return blob;
+          };
+        var shareFB=function(){
+
+			var dataURI=document.getElementById("canvas").toDataURL();
+	          var mimeType="image"+dataURI.substring(dataURI.indexOf("/"),dataURI.indexOf("/")+3);
+	          dataURI=dataURI.substring(dataURI.indexOf(",")+1,dataURI.length);
+	          blob = dataURItoBlob(dataURI,mimeType);
+	          var fd = new FormData();
+	          fd.append("source", blob);
+	          fd.append("message","");
+	          //TODO
+	          $.ajax({
+	                url:"https://graph.facebook.com/me/photos?access_token=" + facebook_access_token,
+	                type:"POST",
+	                data:fd,
+	                processData:false,
+	                contentType:false,
+	                cache:false,
+	                success:function(data)
+	                {
+	                    var pid=data["id"];
+	                    document.getElementById("info").innerHTML='<a class="btn btn-success btn-lg" role="button" href="https://www.facebook.com/photo.php?fbid='+pid+'">OK!'+'<'+'/a>';
+                        document.getElementById("info").class="alert alert-success";
+	                },
+	                error:function(shr,status,data){
+	                    console.log("error " + data + " Status " + shr.status);
+	                }
+	            });
+
+        };
+
+        drawChart();
+        drawTimepiece();
+        shareFB();
+
+
+		</script>
+	</body>
+</html>

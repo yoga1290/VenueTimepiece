@@ -1,7 +1,7 @@
 #	Introduction:
 ----
 
-	Generates Timepiece graphs based on foursquare checkins and shares it on facebook!.. just thought, I should try AngularJS :D!
+Generates Timepiece graphs based on foursquare checkins and shares it on facebook!.. just thought, I should try AngularJS :D!
 
 ![readme/readme.png](readme/readme.png)
 
@@ -18,11 +18,13 @@
 		+	progressCtrl
 		+	canvasCtrl
 
-		
+
 ---
 +	AppEngine Servlet:
 	+ [facebook.java](): 	facebook graph API & OAuth 2.0 clients
 	+ [foursquare.java](): 	foursquare API & OAuth 2.0 clients
+
+	
 ----
 
 ----

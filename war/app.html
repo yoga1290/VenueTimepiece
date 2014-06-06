@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en" ng-app='app'>
+
+<head>
+<script src="https://code.jquery.com/jquery.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.16/angular.min.js"></script>
+<script src="https://angular-ui.github.io/bootstrap/ui-bootstrap-tpls-0.11.0.min.js"></script>
+
+  
+  
+  <!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css"> 
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  
+  
+  
+<meta charset=utf-8 />
+<title>Timepiece graph</title>
+
+</head>
+<body>
+  
+  
+  
+  <div class="row">
+    <div class="col-sm-4 col-md-3" ng-controller='menuCtrl'>
+  
+  <nav class="navbar navbar-default" role="navigation">
+  <div class="container-fluid">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="#">Select a venue</a>
+    </div>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      
+        <div class="form-group">
+          <input type="text" ng-model="searchQuery" class="form-control" placeholder="Search" ng-change="search();">
+        </div>
+      
+        
+        
+        <div class="list-group">
+  <a href class="list-group-item" ng-repeat="v in searchResults track by $index" ng-click="select(v)" ng-class="{active:isSelected(v)}" >
+    {{v.name}}
+          
+          </a>
+</div>
+        
+        
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </div><!-- /.container-fluid -->
+</nav>
+  
+    </div><!-- end of <div class="col-sm-3 col-md-4"> -->
+  
+  <div class="col-sm-8 col-md-15">
+    
+    <div class="panel panel-default" ng-controller='canvasCtrl'>
+      <div class="panel-body"  id="canvasPanel">
+          <progressbar ng-controller='progressCtrl' ng-show="progress<100" max="100" value="progress">
+            <span style="color:black; white-space:nowrap;"> {{progress}} </span>
+          </progressbar>
+          <canvas id="canvas"></canvas>
+      </div> <!--end of panel-body -->
+      <div class="panel-footer">
+
+        <button ng-show="selected" ng-click="shareFB();" type="button" class="btn btn-primary btn-lg">
+          <span class="glyphicon glyphicon-share-alt"></span> Share on facebook
+        </button>
+      </div>
+  </div> <!--end of panel -->
+
+    
+  </div> <!-- end of col-sm-8 col-md-15 -->
+  
+  </div> <!-- end of row -->
+   
+<footer class="footer">
+  <table width="100%">
+    <tr>
+      <td align="center">
+  <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="http://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br /><span xmlns:dct="http://purl.org/dc/terms/" href="http://purl.org/dc/dcmitype/InteractiveResource" property="dct:title" rel="dct:type">VenueTimepiece</span> by <a xmlns:cc="http://creativecommons.org/ns#" href="http://github.com/yoga1290/" property="cc:attributionName" rel="cc:attributionURL">Youssef Gamil</a> is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+</td></tr>
+</table>
+
+</footer>  
+<script>
+(function(){
+  
+  
+  
+  
+  
+  var App = angular.module('app', ['ui.bootstrap']);  
+  
+  App.factory('dataLoader',['$http','$rootScope',function($http,$rootScope){
+    var foursquare_access_token='foursquare_access_token_here';
+    var facebook_access_token='facebook_access_token_here';
+    var lpad=function(x){
+      x=""+x;
+      while(x.length<2)
+        x="0"+x;
+      return x;
+    };
+    var date=new Date();
+    var v=lpad(date.getDate())+lpad(date.getMonth()+1)+date.getFullYear();
+    var venues={};
+    var venueIds=[];
+    return {
+      getVenues:function(){
+        return venues;
+      },
+      getVenueIds:function(){
+        return venueIds;
+      },
+      shareFB:function(){
+      
+      	if(facebook_access_token=='facebook_access_token_here')
+      	{
+      		location.href="https://www.facebook.com/dialog/oauth?client_id=482991465179537&redirect_uri=https://yogash1290.appspot.com/venuetp/oauth/facebook/&scope=publish_stream&status="+foursquare_access_token;
+        		return;
+        }
+        var dataURItoBlob=function (dataURI,mime) {
+            // convert base64 to raw binary data held in a string
+            // doesn't handle URLEncoded DataURIs
+            var byteString = window.atob(dataURI);
+            // separate out the mime component
+
+            // write the bytes of the string to an ArrayBuffer
+            //var ab = new ArrayBuffer(byteString.length);
+            var ia = new Uint8Array(byteString.length);
+            for (var i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+
+            // write the ArrayBuffer to a blob, and you're done
+            var blob = new Blob([ia], { type: mime });
+
+            return blob;
+          };
+
+          var data=document.getElementById("canvas").toDataURL();
+          var mimeType="image"+data.substring(data.indexOf("/"),data.indexOf("/")+3);
+          data=data.substring(data.indexOf(",")+1,data.length);
+          blob = dataURItoBlob(data,mimeType);
+          var fd = new FormData();
+          fd.append("source", blob);
+          fd.append("message","");
+          $http.ajax({
+                url:"https://graph.facebook.com/me/photos?access_token=" + facebook_access_token,
+                type:"POST",
+                data:fd,
+                processData:false,
+                contentType:false,
+                cache:false,
+                success:function(data)
+                {
+                    var pid=data["id"];
+                    
+                },
+                error:function(shr,status,data){
+                    console.log("error " + data + " Status " + shr.status);
+                }
+            });
+      },
+      getCheckins:function(offset){
+        var thisService=this;
+        $http.get('https://api.foursquare.com/v2/users/self/checkins?limit=250&offset='+offset+'&oauth_token='+foursquare_access_token+'&v='+v).success(function(data){
+
+            var total=data.response.checkins.count;
+
+            $rootScope.$broadcast('progress', parseInt(offset*100/total) );
+
+            for(var i=0;i<data['response']['checkins']['items'].length;i++)
+            {
+            //    console.log(i);
+              if(data['response']['checkins']['items'][i]['venue']==undefined) continue;
+              if(venues[data['response']['checkins']['items'][i]['venue'].id]==undefined)
+              {
+                  venueIds.push(data['response']['checkins']['items'][i]['venue'].id);
+                  var tp=[0, 0,0,0, 0,0,0, 0,0,0, 0, 0,0];
+                  var am=[0, 0,0,0, 0,0,0, 0,0,0, 0, 0,0];
+                  var pm=[0, 0,0,0, 0,0,0, 0,0,0, 0, 0,0];
+                  var checkinHour=(
+                    parseInt(data['response']['checkins']['items'][i]['timeZoneOffset']/60)+
+                    new Date(data['response']['checkins']['items'][i]['createdAt']*1000).getHours()
+                    );
+                  if(checkinHour<12)
+                    am[checkinHour%12]++;
+                  else  pm[checkinHour%12]++;
+
+                  tp[checkinHour%12]++;
+
+                  venues[data['response']['checkins']['items'][i]['venue']['id']]=
+                  {
+                        name:data['response']['checkins']['items'][i].venue.name,
+                        totalcheckins: data['response']['checkins']['items'][i]['venue']['stats']['checkinsCount'],
+                        timepiece:tp,
+                        am:am,
+                        pm:pm,
+                        checkins:((data['response']['checkins']['items'][i]['venue']['beenHere']==undefined) ? 0:data['response']['checkins']['items'][i]['venue']['beenHere']['count'])
+                  };
+              }
+              else
+              {
+                var checkinHour=(
+                    parseInt(data['response']['checkins']['items'][i]['timeZoneOffset']/60)+
+                    new Date(data['response']['checkins']['items'][i]['createdAt']*1000).getHours()
+                    );
+
+                venues[data['response']['checkins']['items'][i]['venue']['id']].timepiece[checkinHour%12]++;
+                if(checkinHour<12)
+                  venues[data['response']['checkins']['items'][i]['venue']['id']].am[checkinHour%12]++;
+                else
+                  venues[data['response']['checkins']['items'][i]['venue']['id']].pm[checkinHour%12]++;
+              }
+      }
+      
+            offset+=data['response']['checkins']['items'].length;
+            if(offset<total)
+              thisService.getCheckins(offset);
+            else
+            {
+              $rootScope.$broadcast('progress', 101 );
+            }
+         }); //end of http.success
+       
+      } // end of getCheckins
+
+    }; //end of the return statment
+    
+  }]); //end of dataLoader
+
+  
+  
+  
+  
+App.controller('menuCtrl', function ($scope,$rootScope,dataLoader) {
+  
+  $scope.selected=-1;
+  $scope.searchQuery='';
+  $scope.venues={};
+  $scope.venueIds=[];
+  $scope.searchResults=[];
+
+  dataLoader.getCheckins(0);
+
+  $scope.$on('progress', function(event, x) {
+        if(x==101)
+        {
+          $scope.venues=dataLoader.getVenues();
+          $scope.venueIds=dataLoader.getVenueIds();
+          $scope.searchResults=$scope.venues;
+        }
+    });
+  
+  $scope.select=function(selected){
+    $scope.selected=selected;
+    $rootScope.$broadcast('drawCanvas', selected );
+  };
+
+  $scope.search=function(){
+    var result=[];
+    for(var i=0;i<$scope.venueIds.length;i++)
+      if($scope.venues[$scope.venueIds[i]].name.toUpperCase().indexOf($scope.searchQuery.toUpperCase())!=-1)
+        result.push($scope.venues[$scope.venueIds[i]]);
+    $scope.searchResults=result;
+  };
+  
+  $scope.isSelected=function(item){
+    return $scope.selected==item;
+  };
+    
+  }); //end of menuCtrl
+  
+  
+  
+  
+  
+  
+  App.controller('progressCtrl', function ($scope,dataLoader) {
+  
+      $scope.progress=0;
+      $scope.$on('progress', function(event, x) {
+          $scope.progress = x;
+      });
+    
+    
+  });//end of progressCtrl
+
+
+  App.controller('canvasCtrl', function ($scope,dataLoader) {
+
+
+      $scope.selected=null;
+      $scope.shareFB=function(){
+          // dataLoader.shareFB();
+          var venues=dataLoader.getVenues();
+          var venuesId=dataLoader.getVenueIds();
+          var maxCheckin=0;
+          for(i=0;i<venuesId.length;i++)
+            maxCheckin=Math.max(maxCheckin,(venues[venuesId[i]].checkins==undefined) ? 0:venues[venuesId[i]].checkins);
+
+          sessionStorage.data=JSON.stringify({
+            checkins:$scope.selected.checkins,
+            am:$scope.selected.am,
+            pm:$scope.selected.pm,
+            maxCheckin:maxCheckin
+          });
+          location.href="https://www.facebook.com/dialog/oauth?client_id=482991465179537&redirect_uri=https://yogash1290.appspot.com/venuetp/oauth/facebook/&scope=publish_actions,publish_stream&state=share";//+JSON.stringify(data);
+      };
+  
+
+        $scope.drawTimepiece=function(venue)
+            {
+                var i,timedata=venue.timepiece;
+                var canvas = document.getElementById("canvas");
+                var max=timedata[0];
+                for(i=0;i<12;i++)
+                    max=Math.max(max,Math.max(venue.am[i],venue.pm[i]));
+                
+                R=Math.min(canvas.width,canvas.height)/3; //diameter/2* (2/3)=diameter/3
+                
+                var context = canvas.getContext("2d");
+                var centerX = canvas.width / 2;
+                var centerY = canvas.height / 2;
+                var radius = Math.min(centerX,centerY);
+                var startingAngle,endingAngle=1.5*Math.PI;//as 12:00 starts at [0]//0;
+                var counterclockwise = false;
+                
+                context.setLineWidth=100;
+                context.strokeStyle="#0000FF";
+                
+                context.font="20px Arial";
+
+                var apm=0;
+                console.log("AM:");
+                console.log(venue.am);
+                console.log("PM:");
+                console.log(venue.pm);
+                for(i=0;i<12;i++)
+                {
+                    startingAngle=endingAngle;
+                    endingAngle=startingAngle+Math.PI*2/12;//12 hour graph
+                    //12 at [0] (as 12%12==0)
+                    //9AM at 0deg
+                    apm=0;
+                    if(venue.am[i]<venue.pm[i]) apm=1;//draw the bigger 1st
+
+                    radius=(apm==0 ? venue.am[i]:venue.pm[i])*R/max;
+                    context.fillStyle=(apm==0 ? "#00FF00":"#0000FF");
+                    context.strokeStyle="#C0C0C0";//(apm==0 ? "#0000FF":"#00FF00");
+                    //triangle
+                    context.beginPath(); // begin custom shape
+                    context.moveTo(centerX, centerY);
+                    context.lineTo(centerX+Math.cos(startingAngle)*radius ,centerY+Math.sin(startingAngle)*radius);
+                    context.lineTo(centerX+Math.cos(endingAngle)*radius ,centerY+Math.sin(endingAngle)*radius);
+                    context.lineTo(centerX,centerY);
+                    context.closePath();
+                    context.fill();
+                    context.stroke();
+                    //draw the one w smaller R:
+                    apm=1-apm;
+                    radius=(apm==0 ? venue.am[i]:venue.pm[i])*R/max;
+                    context.fillStyle=(apm==0 ? "#00FF00":"#0000FF");
+                    context.strokeStyle="#C0C0C0";//(apm==0 ? "#0000FF":"#00FF00");
+                    //triangle
+                    context.beginPath(); // begin custom shape
+                    context.moveTo(centerX, centerY);
+                    context.lineTo(centerX+Math.cos(startingAngle)*radius ,centerY+Math.sin(startingAngle)*radius);
+                    context.lineTo(centerX+Math.cos(endingAngle)*radius ,centerY+Math.sin(endingAngle)*radius);
+                    context.lineTo(centerX,centerY);
+                    context.closePath();
+                    context.fill();
+                    context.stroke();
+                }
+
+                endingAngle=1.5*Math.PI;
+                context.fillStyle="#C0C0C0";//="#FFFFFF";
+                context.strokeStyle="#C0C0C0";//="#0000FF";
+                for(i=0;i<12;i++)
+                {
+                    //12 at [0] (as 12%12==0)
+                    //9AM at 0deg
+                    apm=0;
+                    if(venue.am[i]<venue.pm[i]) apm=1;
+                    radius=(apm==0 ? venue.am[i]:venue.pm[i])*R/max;
+
+                    startingAngle=endingAngle;
+                    endingAngle=startingAngle+Math.PI*2/12;//12 hour graph
+                    //dot
+                    context.beginPath();
+                    context.arc(centerX+Math.cos(startingAngle)*radius ,centerY+Math.sin(startingAngle)*radius, 5, 0, Math.PI<<1, counterclockwise);
+                    context.closePath();
+                    context.fill();
+                     if((venue.am[i]+venue.pm[i])>0)
+                     {
+                        context.strokeText( (venue.am[i]+venue.pm[i]) ,centerX+Math.cos(startingAngle)*radius ,20+centerY+Math.sin(startingAngle)*radius );
+                        context.fillText( (venue.am[i]+venue.pm[i]) ,centerX+Math.cos(startingAngle)*radius ,20+centerY+Math.sin(startingAngle)*radius );
+                    
+                    context.stroke();
+                    }
+                }
+            };
+      // $scope.drawTimepiece([1,2,3,4,5,6,7,8,9,10,11,12],200);
+        $scope.drawChart= function(venue){
+        
+            var i;
+            var canvas = document.getElementById("canvas");
+            var venues=dataLoader.getVenues();
+            var venuesId=dataLoader.getVenueIds();
+            
+
+            canvas.height=canvas.width=
+              Math.max(
+                $(window).width(),
+                $(window).height()
+              )/2-20;// this clears the canvas too!
+
+            
+            var context = canvas.getContext("2d");
+            var centerX = canvas.width / 2;
+            var centerY = canvas.height / 2;
+            var R = Math.min(centerX,centerY);
+            var startingAngle,endingAngle= Math.PI*1.5;//starting angle
+            var counterclockwise = false;
+
+            var maxCheckin=0;
+            for(i=0;i<venuesId.length;i++)
+              maxCheckin=Math.max(maxCheckin,(venues[venuesId[i]].checkins==undefined) ? 0:venues[venuesId[i]].checkins);
+            console.log(venue.checkins+' / '+maxCheckin);
+            
+            // Draw the 1s with bigger area first
+            var pie=[
+                [Math.PI*2*(maxCheckin-venue.checkins)/maxCheckin,
+                  "#00FF00"],
+                  [Math.PI*2*venue.checkins/maxCheckin,
+                  "#0000FF"]
+                  ];
+              pie.sort();
+            for(i=pie.length-1;i>=0;i--)
+            {   
+                startingAngle=endingAngle;
+                endingAngle=startingAngle+pie[i][0];
+                context.strokeStyle=context.fillStyle=pie[i][1];
+                context.beginPath();
+                
+                context.arc(centerX, centerY, R, startingAngle, endingAngle, counterclockwise);
+                context.closePath();
+                context.fill();
+                context.stroke();
+                //triangle
+                //(centerX,centerY)
+                //(centerX+Rcos(stAngle),centerY+Rsin(angle))
+                //(centerX+Rcos(edAngle),centerY+Rsin(edAngle))
+                context.strokeStyle=context.fillStyle=pie[i][1];
+
+                context.beginPath(); // begin custom shape
+                context.moveTo(centerX, centerY);
+                context.lineTo(centerX+Math.cos(startingAngle)*R ,centerY+Math.sin(startingAngle)*R);
+                context.lineTo(centerX+Math.cos(endingAngle)*R ,centerY+Math.sin(endingAngle)*R);
+                context.lineTo(centerX,centerY);
+                context.closePath();
+                
+                context.fill();
+                context.stroke();
+            }
+             context.strokeStyle=context.fillStyle="#FFFFFF";
+             context.beginPath();    
+             context.arc(centerX, centerY, R*2/3, 0, Math.PI*2, counterclockwise);
+             context.closePath();
+             context.fill();
+
+        };
+
+
+      $scope.drawCompareCnvs= function(venue){
+        
+            var i;
+            var venues=dataLoader.getVenues();
+            var venuesId=dataLoader.getVenueIds();
+            var venueIdSortedByTotalCheckins=[];
+            var venueIdSortedByCheckins=[];
+            var sumOfTotalCheckins=0;
+            var sumOfCheckins=0;
+            var maxCheckins=0;
+            for(i=0;i<venuesId.length;i++)
+            {
+                maxCheckins=Math.max(maxCheckins,venues[venuesId[i]].checkins);
+                sumOfTotalCheckins+=venues[venuesId[i]].totalcheckins;
+                // sumOfCheckins+=venues[venuesId[i]].checkins;
+                venueIdSortedByTotalCheckins.push([
+                    venues[venuesId[i]].totalcheckins,
+                    venuesId[i]
+                  ]);
+            }
+            venueIdSortedByTotalCheckins.sort();            
+
+            
+            var canvas = document.getElementById("compareCnvs");
+            
+            canvas.height=canvas.width=
+              Math.max(
+                $(window).width(),
+                $(window).height()
+              )/2-20;// this clears the canvas too!
+            // canvas.height=canvas.width=
+            //   Math.max(
+            //     $('#canvasPanel').width(),
+            //     $('#canvasPanel').height()
+            //   )-20;// this clears the canvas too!
+
+            var context = canvas.getContext("2d");
+            var centerX = canvas.width / 2;
+            var centerY = canvas.height / 2;
+            var R = Math.min(centerX,centerY);
+            var startingAngle=0,endingAngle=0;
+            var lastAngle = 0;
+            var counterclockwise = false;
+            
+            //starting angle of the selected venue:
+            for(i=venueIdSortedByTotalCheckins.length-1;i>=0;i--)
+            {
+
+                startingAngle=endingAngle;
+                endingAngle=startingAngle+Math.PI*2*
+                  venues[venueIdSortedByTotalCheckins[i][1]].totalcheckins/
+                  sumOfTotalCheckins;
+                if(venues[venueIdSortedByTotalCheckins[i][1]].name==venue.name)
+                {
+                  endingAngle=startingAngle;
+                  console.log("starting angle="+startingAngle);
+                  break;
+                }
+            }
+            // Draw the 1s with bigger area first
+            var ratioR;
+            // context.setLineWidth=100;
+            for(i=venueIdSortedByTotalCheckins.length-1;i>=0;i--)
+            {         
+                context.fillStyle="#00FF00";
+                context.strokeStyle="#00FF00";
+                if(venues[venueIdSortedByTotalCheckins[i][1]].name===venue.name)
+                {
+                  context.strokeStyle="#0000FF";
+                  context.fillStyle="#0000FF";
+                }
+                // console.log(venues[venueIdSortedByTotalCheckins[i][1]].totalcheckins+" / "+
+                //   sumOfTotalCheckins);
+                context.beginPath();
+                startingAngle=endingAngle;
+
+                endingAngle=startingAngle+Math.PI*2*
+                  venues[venueIdSortedByTotalCheckins[i][1]].totalcheckins/
+                  sumOfTotalCheckins;
+
+                ratioR=Math.max(10, //R can't be less than 10px
+                      R
+                      *
+                      venues[venueIdSortedByTotalCheckins[i][1]].checkins
+                      /maxCheckins
+                    );
+                
+                context.arc(centerX, centerY, ratioR, startingAngle, endingAngle, counterclockwise);
+                context.closePath();
+                context.fill();
+
+                //triangle
+                //(centerX,centerY)
+                //(centerX+Rcos(stAngle),centerY+Rsin(angle))
+                //(centerX+Rcos(edAngle),centerY+Rsin(edAngle))
+                context.beginPath(); // begin custom shape
+                context.moveTo(centerX, centerY);
+                context.lineTo(centerX+Math.cos(startingAngle)*ratioR ,centerY+Math.sin(startingAngle)*ratioR);
+                context.lineTo(centerX+Math.cos(endingAngle)*ratioR ,centerY+Math.sin(endingAngle)*ratioR);
+                context.lineTo(centerX,centerY);
+                context.closePath();
+                context.fill();
+            }
+        };
+
+      $scope.$on('drawCanvas', function(event, venue) {
+        $scope.drawChart(venue);
+        $scope.drawTimepiece(venue);
+        $scope.selected=venue;
+        // $scope.drawCompareCnvs(venue);
+      });
+    
+  });//end of canvasCtrl
+
+
+
+
+  
+  
+  
+ //end of col
+})();
+</script>
+</body>
+</html>
